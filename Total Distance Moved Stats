@@ -1,0 +1,203 @@
+############################
+# DS_PTZ_48hph
+# Total distance Traveled stats
+# File 1 of 2
+# Elle Patullo
+############################
+
+# DS + PTZ 48hph total distance traveled stats
+# Method: Hypothesis testing
+# Tests: Shapiro-Wilk, Levene's, Kruskal-Wallace, Dunn's
+
+# Before using r:
+# export data from ethovision w/ blank values as "NA"
+# verify/simplify column names
+# Add column with light/dark photoperiods (e.g. "Dark 1", "Light 1", "Dark 2", etc.)
+
+# packages
+
+library(readr)
+library(dplyr)
+library(forcats)
+library(tidyr)
+library(stats)
+library(purrr)
+library(broom)
+
+
+##### Step 1: Load and prep data #####
+
+# Load
+
+# library(readr)
+
+  # set working directory
+setwd("~/Thesis Project/Data/022822_DS_PTZ_48hph")
+
+# upload data and create object
+DS_PTZ_48hph <- read_csv("30secbins_EDITED_022822_DS_PTZ_48hph_RETRACK.csv")
+View(DS_PTZ_48hph)
+
+summary(DS_PTZ_48hph)
+
+# remove NA values from total distance moved column
+DS_PTZ_48hph.omit <- DS_PTZ_48hph[!(is.na(DS_PTZ_48hph$total_distance_moved)), ]
+View(DS_PTZ_48hph.omit)
+
+
+# Reorganize/transform
+
+# library(tidyr)
+# library(dplyr)
+# library(forcats)
+
+DM_48h <- DS_PTZ_48hph.omit %>% # creating a pipe
+  mutate(trial = fct_relevel(trial, "Trial     2", "Trial     3", "Trial     4", "Trial     5", "Trial     6"),
+         trial = fct_recode(trial, "Trial1" = "Trial     2",
+                            "Trial2" = "Trial     3",      
+                            "Trial3" = "Trial     4",          
+                            "Trial4" = "Trial     5",         
+                            "Trial5" = "Trial     6")) %>% 
+  unite(col = newID, trial, replicate, sep = "_") %>%       # creates a new ID combining trial and replicate
+  mutate(treatment = fct_relevel(treatment, "Control", "2mM", "4mM", "8mM", "12mM", "16mM"),
+         treatment = fct_recode(treatment, "0" = "Control",
+                                "2" = "2mM",
+                                "4" = "4mM",
+                                "8" = "8mM",
+                                "12" = "12mM",
+                                "16" = "16mM"),
+         photoperiod = fct_relevel(photoperiod, "dark1", "dark2", "light1", "dark3", "light2", "dark4", "dark5")) %>%
+  group_by(treatment, newID, photoperiod) %>% 
+  summarize(MeanDM = mean(`total_distance_moved`)) # calculate mean total distance moved
+
+View(DM_48h)
+
+# NOTES: 
+  # unite() combines columns
+  # fct_relevel() reorders the levels (treatments)
+  # group_by() takes an existing tbl and converts it into a grouped tbl where operations are performed "by group".
+
+
+# Familiarize with data as needed
+
+class(DM_48h)
+str(DM_48h)
+summary(DM_48h)
+
+
+
+#### Step 2: Explore data Visually ####
+
+# create a histogram to look at distribution
+hist(DM_48h$MeanDM, main = "Distribution of Mean Distance Moved", xlab = "Mean Distance Moved")
+
+  # If there are a lot of zeros, a log(n+1) transformation may be helpful
+
+# create a boxplot to check for outliers
+boxplot(MeanDM~treatment, data = DM_48h, main = "Mean distance moved per treatment")
+
+# NOTE: you can also make a violin plot, which combines the two plot types
+
+
+
+#### Step 3: Shapiro-Wilk test #### 
+
+# statistically analyze the distribution of the data
+
+# Shapiro-Wilk test
+
+# library(stats)
+# library(purr)
+# library(broom)
+
+DS_PTZ_48hph_shapiro <- DM_48h %>%
+  group_by(treatment, photoperiod) %>%
+  nest() %>% 
+  ungroup() %>% 
+  mutate(shapiro = map(data, ~tidy(shapiro.test(.x$MeanDM)))) %>% 
+  unnest(shapiro) %>% 
+  select(treatment, photoperiod, statistic, p.value, method)
+View(DS_PTZ_48hph_shapiro)
+
+
+# the code above runs the Shapiro-Wilk test to compare the distance moved between each treatment WITH Photoperiod taken into consideration as well
+# a p-value > 0.05 is normally distributed
+# a p-value < 0.05 is not normally distributed.
+# if ANY of the results come back significant, the data as a whole is not normally distributed
+
+
+
+#### Step 4: Levene's Test ####
+
+# statistical analysis of variance homogeneity
+
+
+# method 1
+
+# library(rstatix)
+
+DS_PTZ_48hph_levene_photoperiod<- DM_48h %>%
+  group_by(treatment) %>%
+  nest() %>% 
+  mutate(levene = map(data, ~levene_test(.x, MeanDM ~ photoperiod))) %>% 
+  unnest(levene) %>% 
+  select(treatment, df1, df2, statistic, p)
+View(DS_PTZ_48hph_levene_photoperiod)
+
+# this method allows us to look at the variance homogeneity in each treatment from one photoperiod to another
+# It gives us a bit more detail than just looking at variance between each treatment, though we will also do this
+
+# if p-values < 0.05, the variance among the groups is not equal
+# if p-values > 0.05, the variance among groups is equal
+
+
+# method 2 
+
+DS_PTZ_48hph_levene_treatment<- DM_48h %>%
+  group_by(photoperiod) %>%
+  nest() %>% 
+  mutate(levene = map(data, ~levene_test(.x, MeanDM ~ treatment))) %>% 
+  unnest(levene) %>% 
+  select(photoperiod, df1, df2, statistic, p)
+View(DS_PTZ_48hph_levene_treatment)
+
+# this method allows us to look at the variance homogeneity in each photoperiod from one treatment to another
+
+# if p-values < 0.05, the variance among the groups is not equal
+# if p-values > 0.05, the variance among groups is equal
+
+
+
+#### Step 5: Kruskal-Wallis Test ####
+
+# testing for significant difference in mean distance moved values
+  # for each photoperiod
+
+# Kruskal-Wallis
+
+DS_PTZ_48hph_KRUSKAL <- DM_48h %>%
+  group_by(photoperiod) %>%
+  nest() %>% 
+  mutate(kruskal = map(data, ~kruskal_test(.x, MeanDM ~ treatment))) %>% 
+  unnest(kruskal) 
+View(DS_PTZ_48hph_KRUSKAL)
+
+
+
+#### Step 6: Dunn's Test ####
+
+# testing for significant difference in mean distance moved 
+  # between treatments during each photoperiod
+
+# Dunn's Test
+
+DS_PTZ_48hph_DUNNS <- DM_48h %>%
+  group_by(photoperiod) %>%
+  nest() %>% 
+  mutate(dunns = map(data, ~dunn_test(.x, MeanDM ~ treatment, p.adjust.method = "bonferroni"))) %>% 
+  unnest(dunns)
+View(DS_PTZ_48hph_DUNNS)
+
+# NOTE: you can also run a Dunnet's test to compare each dose to the control only
+
+## End of file 1. File 2 creates tables from stats results for better visualization.
