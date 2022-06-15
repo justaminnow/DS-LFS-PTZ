@@ -1,0 +1,266 @@
+############################
+# DS_PTZ_48hph
+# Total distance traveled stats-- data visualization
+# File 2 of 2
+# Elle Patullo
+############################
+
+# packages
+
+library(gt)
+library(webshot)
+
+
+
+#### Shapiro-Wilk ####
+
+DS_PTZ_DM_Shapiro_results <- DS_PTZ_48hph_shapiro %>%
+  gt(groupname_col = "photoperiod") %>% # organizes results as subsets within each photoperiod
+  cols_hide(columns = c("method")) %>% # hide unnecessary columns
+  tab_header(
+    title = "Shapiro-Wilk's Test Results: Total Distance moved",
+    subtitle = "Delta Smelt (48hph) + pentylenetetrazole"
+  ) %>% # edit title and subtitle
+  cols_align("center") %>% # centers text in columns
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      rows = p.value <= 0.05 # changes text of rows with significant values to red
+    )
+  )
+
+
+
+DS_PTZ_DM_Shapiro_results
+
+
+# saving the file
+# must save as .html first 
+DS_PTZ_DM_Shapiro_results %>%
+  gtsave("DS_48h_PTZ_DM_Shapiro_results.html", 
+         inline_css = TRUE, 
+         path = tempdir()) 
+
+# then save as .png
+DS_PTZ_DM_Shapiro_results %>%
+  gtsave("DS_48h_PTZ_DM_Shapiro_results.png", expand = 10, path = tempdir())
+
+
+
+
+#### Levene's Test ####
+
+# group by treatment
+
+DS_PTZ_DM_Levene_photo_results <- DS_PTZ_48hph_levene_photoperiod %>%
+  gt(groupname_col = FALSE) %>% # removes grouping column
+  tab_header(
+    title = "Levene's Test Results: Total Distance moved",
+    subtitle = "Delta Smelt (48hph) + pentylenetetrazole"
+  ) %>% # add title and subtitle
+  cols_align("center") %>% # align text in each column
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      rows = p <= 0.05 # changes text of rows with significant values to red
+    )
+  )
+
+DS_PTZ_DM_Levene_photo_results
+
+# saving the file
+# must save as .html first 
+DS_PTZ_DM_Levene_photo_results %>%
+  gtsave("DS_48h_PTZ_DM_Levene_photo_results.html", 
+         inline_css = TRUE, 
+         path = tempdir()) 
+
+# then save as .png
+DS_PTZ_DM_Levene_photo_results %>%
+  gtsave("DS_48h_PTZ_DM_Levene_photo_results.png", expand = 10, path = tempdir())
+
+
+#group by photoperiod
+
+DS_PTZ_DM_Levene_treat_results <- DS_PTZ_48hph_levene_treatment %>%
+  gt(groupname_col = FALSE) %>% # removes grouping column
+  tab_header(
+    title = "Levene's Test Results: Total Distance moved",
+    subtitle = "Delta Smelt (48hph) + pentylenetetrazole"
+  ) %>% # add title and subtitle
+  cols_align("center") %>% # align text in each column
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      rows = p <= 0.05 # change text in rows with significant values to red
+    )
+  )
+
+DS_PTZ_DM_Levene_treat_results
+
+# saving the file
+# must save as .html first 
+DS_PTZ_DM_Levene_treat_results %>%
+  gtsave("DS_48h_PTZ_DM_Levene_treat_results.html", 
+         inline_css = TRUE, 
+         path = tempdir()) 
+
+# then save as .png
+DS_PTZ_DM_Levene_treat_results %>%
+  gtsave("DS_48h_PTZ_DM_Levene_treat_results.png", expand = 10, path = tempdir())
+
+
+
+#### Kruskal-Wallis results ####
+
+DS_PTZ_DM_Kruskal_results <- DS_PTZ_48hph_KRUSKAL %>%
+  gt(groupname_col = NULL, rowname_col = "photoperiod") %>% # adds a grouping column to organize data as subsets
+  cols_hide(columns = c("data", ".y.", "method")) %>% # remove unnecessary columns
+  tab_header(
+    title = "Kruskal-Wallis Test Results: Total Distance Moved",
+    subtitle = "Delta Smelt (48hph) + pentylenetetrazole"
+  ) %>% # add title and subtitle
+  cols_align("center") %>% # align text in center of cell
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      rows = p <= 0.05 # change color of rows with significant values to red
+    )
+  )
+
+
+DS_PTZ_DM_Kruskal_results
+
+# saving the file
+# must save as .html first 
+DS_PTZ_DM_Kruskal_results %>%
+  gtsave("DS_48h_PTZ_DM_Kruskal_results.html", 
+         inline_css = TRUE, 
+         path = tempdir()) 
+
+# then save as .png
+DS_PTZ_DM_Kruskal_results %>%
+  gtsave("DS_48h_PTZ_DM_Kruskal_results.png", expand = 10, path = tempdir())
+
+
+
+#### Dunn's test results ####
+
+# full table
+
+DS_PTZ_DM_Dunn_results <- DS_PTZ_48hph_DUNNS %>% 
+  gt(groupname_col = "photoperiod") %>% # group data by photoperiod
+  cols_hide(columns = c("data", ".y.")) %>% # remove unnecessary columns
+  tab_header(
+    title = "Dunn's Test Results: Total Distance Moved",
+    subtitle = "Delta Smelt (48hph) + pentylenetetrazole"
+  ) %>% # add title
+  fmt_number( 
+    columns = c(statistic, p, p.adj), 
+    n_sigfig = 3 # format numeric values with three significant figures
+  ) %>%
+  cols_label(group1 = "trt_1", group2 = "trt_2") %>% # change columns label
+  cols_align( # center text in columns
+    align = "center",
+    columns = everything()
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      columns = p,
+      rows = p <= 0.05 # making any p-values <= 0.05 red text 
+    )
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      rows = p.adj <= 0.05 # making any adjusted p-values <= 0.05 red text
+    )
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "gray94")
+    ),
+    locations = cells_body(
+      rows = c(1:15, 31:45, 61:75)
+    )
+  )
+DS_PTZ_DM_Dunn_results
+
+# Simplified table
+
+DS_PTZ_48hph_DUNNS_simp <- DS_PTZ_48hph_DUNNS[-c(6:15, 21:30, 36:45, 51:60, 66:75, 81:90, 96:105), ]
+# removed rows not comparing doses to controls
+
+
+DS_PTZ_DM_Dunn_results_simp <- DS_PTZ_48hph_DUNNS_simp %>% 
+  gt(groupname_col = "photoperiod") %>%
+  cols_hide(
+    columns = c("data", ".y.")) %>% # remove unnecessary columns
+  tab_header(
+    title = "Dunn's Test Results: Total Distance Moved",
+    subtitle = "Delta Smelt (48hph) + pentylenetetrazole"
+  ) %>% # add title
+  fmt_number( 
+    columns = c(statistic, p, p.adj), # What column variable?
+    n_sigfig = 3 # format numeric values with three significant figures
+  ) %>%
+  cols_label(group1 = "trt_1", group2 = "trt_2") %>% # change columns label
+  cols_align( # center text in columns
+    align = "center",
+    columns = everything()
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      columns = p,
+      rows = p <= 0.05 # making any p-values <= 0.05 red text 
+    )
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(color = "red")
+    ),
+    locations = cells_body(
+      rows = p.adj <= 0.05 # making any adjusted p-values <= 0.05 red text
+    )
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "gray94")
+    ),
+    locations = cells_body(
+      rows = c(1:5, 11:15, 21:25)
+    )
+  ) 
+
+DS_PTZ_DM_Dunn_results_simp
+
+
+# saving the file
+# must save as .html first 
+DS_PTZ_DM_Dunn_results_simp %>%
+  gtsave("DS_48h_PTZ_DM_Dunn_results_simp.html", 
+         inline_css = TRUE, 
+         path = tempdir()) # may be able to save to workdir() instead
+
+# then save as .png
+DS_PTZ_DM_Dunn_results_simp %>%
+  gtsave("DS_48h_PTZ_DM_Dunn_results_simp.png", expand = 10, path = tempdir())
+
+
+# File 2 complete. 
