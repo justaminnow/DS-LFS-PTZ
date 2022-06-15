@@ -23,6 +23,7 @@ library(tidyr)
 library(stats)
 library(purrr)
 library(broom)
+library(rstatix)
 
 
 ##### Step 1: Load and prep data #####
@@ -188,6 +189,8 @@ View(DS_PTZ_48hph_KRUSKAL)
 
 # testing for significant difference in mean distance moved 
   # between treatments during each photoperiod
+
+# library(rstatix)
 
 # Dunn's Test
 
