@@ -92,7 +92,7 @@ summary(DM_48h)
 # create a histogram to look at distribution
 hist(DM_48h$MeanDM, main = "Distribution of Mean Distance Moved", xlab = "Mean Distance Moved")
 
-  # If there are a lot of zeros, a log(n+1) transformation may be helpful
+  # If there are a lot of zeros, a log(n+1) transformation may be helpful but IS NOT NECESSARY since Kruskal-Wallis and Dunn's Tests are nonparamentric
 
 # create a boxplot to check for outliers
 boxplot(MeanDM~treatment, data = DM_48h, main = "Mean distance moved per treatment")
@@ -104,8 +104,6 @@ boxplot(MeanDM~treatment, data = DM_48h, main = "Mean distance moved per treatme
 #### Step 3: Shapiro-Wilk test #### 
 
 # statistically analyze the distribution of the data
-
-# Shapiro-Wilk test
 
 # library(stats)
 # library(purr)
@@ -174,8 +172,6 @@ View(DS_PTZ_48hph_levene_treatment)
 # testing for significant difference in mean distance moved values
   # for each photoperiod
 
-# Kruskal-Wallis
-
 DS_PTZ_48hph_KRUSKAL <- DM_48h %>%
   group_by(photoperiod) %>%
   nest() %>% 
@@ -192,15 +188,27 @@ View(DS_PTZ_48hph_KRUSKAL)
 
 # library(rstatix)
 
-# Dunn's Test
-
 DS_PTZ_48hph_DUNNS <- DM_48h %>%
   group_by(photoperiod) %>%
   nest() %>% 
   mutate(dunns = map(data, ~dunn_test(.x, MeanDM ~ treatment, p.adjust.method = "bonferroni"))) %>% 
-  unnest(dunns)
+  unnest(dunns)  %>%
+  mutate(significant = case_when(p.adj > 0.05 ~ "ns",
+                                 p.adj <= 0.05 ~"*", 
+                                 p.adj <= 0.01 ~"**"))
 View(DS_PTZ_48hph_DUNNS)
 
+# simplify to only show doses compared to control
+DS_PTZ_48hph_DUNNS_simp <- DS_PTZ_48hph_DUNNS[-c(6:15, 21:30, 36:45, 51:60, 66:75, 81:90, 96:105), ]
+View(DS_PTZ_48hph_DUNNS_simp)
+
+# reorganize and export as .csv
+DS_PTZ_48hph_DUNNS_simp_forprint <- DS_PTZ_48hph_DUNNS_simp %>%
+  select(-data, -n1, -n2) %>%
+  ungroup()
+View(DS_PTZ_48hph_DUNNS_simp_forprint)
+
+write.csv(DS_PTZ_48hph_DUNNS_simp_forprint, "DS_PTZ_48h_DUNNS_simp.csv")
 # NOTE: you can also run a Dunnet's test to compare each dose to the control only
 
 ## End of file 1. File 2 creates tables from stats results for better visualization.
